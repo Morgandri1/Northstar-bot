@@ -8,7 +8,7 @@ import requests, json, os
 intents = discord.Intents.all()
 intents.members = True
 client = commands.Bot(command_prefix=".", intents=intents)
-token = 'OTI5OTAwNTMyMTkyMTQxMzQy.YduDWw.iyAKbrp-Ayq85zK-uF9x5S75GJg'
+token = 'add token please :)'
 server_data = {}
 
 def save_data(guild):
@@ -127,4 +127,5 @@ class MyClient(discord.Client):
         await client.process_commands(message)
 
 
-client.run(token)
+client.run("dont forget me :)")
+#made by Morgandri1 and Skizzme
