@@ -10,6 +10,9 @@ intents.members = True
 client = commands.Bot(command_prefix=".", intents=intents)
 token = 'add token please :)'
 server_data = {}
+snipe_message_content = None
+snipe_message_author = None
+snipe_message_id = None
 
 def save_data(guild):
     with open(f"{guild.id}.json", 'w') as fl:
@@ -90,6 +93,37 @@ class MyClient(discord.Client):
         await ctx.guild.get_member(userID).add_roles(role)
         await ctx.send(f"Muted {userIn}")
 
+
+
+    @client.event
+    async def on_message_delete(message):
+
+        global snipe_message_content
+        global snipe_message_author
+        global snipe_message_id
+
+        snipe_message_content = message.content
+        snipe_message_author = message.author.id
+        snipe_message_id = message.id
+        await asyncio.sleep(60)
+
+        if message.id == snipe_message_id:
+            snipe_message_author = None
+            snipe_message_content = None
+            snipe_message_id = None
+
+    @client.command()
+    async def snipe(message):
+        if snipe_message_content==None:
+            await message.channel.send("Theres nothing to snipe.")
+        else:
+            embed = discord.Embed(description=f"{snipe_message_content}")
+            embed.set_footer(text=f"Asked by {message.author.name}#{message.author.discriminator}", icon_url=message.author.avatar_url)
+            embed.set_author(name= f"{message.author.name}")
+            await message.channel.send(embed=embed)
+            return
+
+
     @client.command()
     @has_permissions(administrator=True)
     async def config(ctx, option, value):
@@ -127,5 +161,5 @@ class MyClient(discord.Client):
         await client.process_commands(message)
 
 
-client.run("dont forget me :)")
+client.run(token)
 #made by Morgandri1 and Skizzme
