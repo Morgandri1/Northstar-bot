@@ -1,7 +1,8 @@
 # northstar-bot
 A discord bot
 
-[site](northstar.icu)
+northstar.icu
+
 <br>commands as of v0.0.2:
 <br>.ping
 <br>.mute
