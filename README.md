@@ -16,6 +16,8 @@ northstar.icu
 <br>.roast {member}
 <br>.snipe
 <br>.coin
+<br>.roll
+<br>.add
 <br>.kick
 <br>.ban
 <br>.hentai
