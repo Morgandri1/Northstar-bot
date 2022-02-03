@@ -3,6 +3,7 @@ from discord import message
 from discord.ext import commands
 from discord.ext.commands import has_permissions
 from discord.webhook import AsyncWebhookAdapter
+from numpy import true_divide
 import requests, json, os
 import asyncio
 import random
@@ -14,88 +15,105 @@ from functools import partial
 import os
 import sys
 import youtube_dl
+import time
 
 intents = discord.Intents.all()
 intents.members = True
 client = commands.Bot(command_prefix=".", intents=intents)
-token = 'OTI5OTAwNTMyMTkyMTQxMzQy.YduDWw.rQuP74UBX6sX6N_HSV_lg6m4W14'
+Tfile = open('token.txt', 'r')
+token = Tfile.readline()
 server_data = {}
 snipe_message_content = None
 snipe_message_author = None
 snipe_message_id = None
 
-def save_data(guild):
-    with open(f"{guild.id}.json", 'w') as fl:
-        json.dump(server_data[guild.id], fl, indent=2)
+
+def save_data():
+    with open(f"configs.json", 'w') as fl:
+        json.dump(server_data, fl, indent=2)
+
 
 def load_data(guild):
-    data = {"mute_role": -1}
-    if os.path.exists(f"{guild.id}.json"):
-        with open(f'{guild.id}.json', 'r') as fl:
-            data = json.load(fl)
+    data = {"mute_role": -1, "pussies": [], "filter": []}  # use <@userid>
+    if os.path.exists(f"configs.json"):
+        with open(f'configs.json', 'r') as fl:
+            loaded = json.load(fl)
+            if f"{guild.id}" in loaded:
+                data = loaded[f"{guild.id}"]
     else:
-        with open(f'{guild.id}.json', 'w') as fl:
+        with open(f'configs.json', 'w') as fl:
             json.dump(data, fl)
+
+    # if data == {}:
+    #     data = {"mute_role": -1, "pussies": []}
 
     return data
 
 class MyClient(discord.Client):
-    async def on_ready(self):
-        print(f'Logged in as {self.user} (ID: {self.user.id})')
-        print('------')
+    @client.event
+    async def on_ready():
+        print(f'We have logged in as {client.user}')
+        print("""
+                 _   _            _   _         _             
+                | \ | |          | | | |       | |            
+                |  \| | ___  _ __| |_| |__  ___| |_ __ _ _ __ 
+                | . ` |/ _ \| '__| __| '_ \/ __| __/ _` | '__|
+                | |\  | (_) | |  | |_| | | \__ \ || (_| | |   
+                \_| \_/\___/|_|   \__|_| |_|___/\__\__,_|_|   
+                
+                        Logged in and ready
+                        made with ❤️  by Morgandri1
+                    """)
+        for guild in client.guilds:
+            server_data[guild.id] = load_data(guild)
+        await client.change_presence(activity=discord.Streaming(name="v1.5", url='https://twitch.tv/Morgandri1'))
 
+    @client.event
     async def on_member_join(self, member):
         guild = member.guild
         if guild.system_channel is not None:
             to_send = f'Welcome {member.mention} to {guild.name}!'
             await guild.system_channel.send(to_send)
 
+    @client.event
+    async def on_message(message):
+        # filter
+                if message.content in server_data[message.guild.id]['filter']:
+                    await message.delete()
+                await client.process_commands(message)
+
     @client.command()
     async def ping(ctx):
         # embed = discord.Embed(title="Ping", description=f"{(int) (client.latency*1000)}ms")
         # await ctx.send(embed=embed)
-        await ctx.send(f"Pong! ({(int) (client.latency*1000)}ms)")
-    
+        await ctx.send(f"Pong! ({(int)(client.latency * 1000)}ms)")
+
     @client.command()
     async def links(ctx):
         await ctx.send("github: https://github.com/Morgandri1 \ntwitch: https://twitch.tv/Morgandri1")
-
-    @client.event
-    async def on_ready():
-        print(f'We have logged in as {client.user}')
-        for guild in client.guilds:
-            server_data[guild.id] = load_data(guild)
-        await client.change_presence(activity=discord.Streaming(name="coding", url='https://twitch.tv/Morgandri1'))
 
     global endpoint
     endpoint = "https://api.twitch.tv/kraken/streams/Morgandri1"
     global api
     api = {
-        'Client-ID' : 'tqanfnani3tygk9a9esl8conhnaz6wj',
-        'Accept' : 'application/vnd.twitchtv.v5+json',
+        'Client-ID': 'tqanfnani3tygk9a9esl8conhnaz6wj',
+        'Accept': 'application/vnd.twitchtv.v5+json',
     }
 
-    def checkUser(userID): #returns true if online, false if not
+    def checkUser(userID):  # returns true if online, false if not
         url = endpoint.format(userID)
 
         try:
             req = requests.Session().get(url, headers=api)
             jsondata = req.json()
             if 'stream' in jsondata:
-                if jsondata['stream'] is not None: #stream is online
+                if jsondata['stream'] is not None:  # stream is online
                     return True
                 else:
                     return False
         except Exception as e:
             print("Error checking user: ", e)
             return False
-
-    @client.event
-    async def on_message(message):
-        if message.author == client.user:
-            return
-
-        await client.process_commands(message)
 
     @client.command()
     @has_permissions(administrator=True)
@@ -108,6 +126,7 @@ class MyClient(discord.Client):
         role = ctx.guild.get_role(roleID)
         await ctx.guild.get_member(userID).add_roles(role)
         await ctx.send(f"Muted {userIn}")
+
     @client.command()
     @has_permissions(administrator=True)
     async def unmute(ctx, userIn: str):
@@ -120,7 +139,12 @@ class MyClient(discord.Client):
         await ctx.guild.get_member(userID).remove_roles(role)
         await ctx.send(f"Unmuted {userIn}")
 
-
+    @client.command
+    @has_permissions(administrator=True)
+    async def stop(ctx):
+        ctx.send("stopping processes...")
+        time.wait(5)
+        exit()
 
     @client.event
     async def on_message_delete(message):
@@ -141,15 +165,15 @@ class MyClient(discord.Client):
 
     @client.command()
     async def snipe(message):
-        if snipe_message_content==None:
+        if snipe_message_content == None:
             await message.channel.send("Theres nothing to snipe.")
         else:
             embed = discord.Embed(title="caught in 4k", description=f"{snipe_message_content}")
-            embed.set_footer(text=f"Asked by {message.author.name}#{message.author.discriminator}", icon_url=message.author.avatar_url)
-            embed.set_author(name= f"{message.author.name}")
+            embed.set_footer(text=f"Asked by {message.author.name}#{message.author.discriminator}",
+                             icon_url=message.author.avatar_url)
+            embed.set_author(name=f"{message.author.name}")
             await message.channel.send(embed=embed)
             return
-
 
     @client.command()
     @has_permissions(administrator=True)
@@ -159,13 +183,33 @@ class MyClient(discord.Client):
             return
 
         if option == 'mute_role':
-            value = value.removeprefix("<@&").removesuffix(">")
+            value = value.removeprefix("<@&").removeprefix("<@").removesuffix(">")
             if not value.isdigit():
                 await ctx.send('integer pls')
                 return
             server_data[ctx.guild.id]['mute_role'] = int(value)
-            save_data(ctx.guild)
+            save_data()
             await ctx.send(f"Set the mute role to id {value}")
+            return
+
+        if option == "pussies":
+            value = value.removeprefix("<@&").removesuffix(">")
+            if not value.isdigit():
+                await ctx.send('integer pls')
+                return
+            server_data[ctx.guild.id]['pussies'].append(value)
+            save_data()
+            await ctx.send(f"Added <@{value}> to the list of pussies")
+            return
+        
+        if option == "filter":
+            filters = server_data[ctx.guild.id]['filter']
+            if filter in filters:
+                await ctx.send("already added to the list of filters")
+                return
+            filters.append(value)
+            save_data()
+            await ctx.send("appended the filter list")
             return
 
         await ctx.send("Failed to do something. idk what. fix")
@@ -173,7 +217,7 @@ class MyClient(discord.Client):
     @client.command()
     async def hentai(ctx):
         if ctx.channel.is_nsfw():
-            url = requests.get(url="https://nekos.life/api/v2/img/hentai").json()['url']
+            url = requests.get(url="https://nekos.life/api/v2/img/pussy").json()['url']
             embed = discord.Embed(title="Here", description="Take some hentai you filthy animal")
             embed.set_image(url=url)
             await ctx.send(embed=embed)
@@ -183,52 +227,59 @@ class MyClient(discord.Client):
     @client.command()
     @commands.has_permissions(administrator=True)
     async def kick(ctx, member: discord.Member, *, reason=None):
-        if reason==None:
-            reason="no reason provided"
+        if reason == None:
+            reason = "no reason provided"
             await ctx.guild.kick(member)
             await ctx.send(f'User {member.mention} has been kicked for ``{reason}``')
 
     @client.command()
     @commands.has_permissions(administrator=True)
     async def ban(ctx, member: discord.Member, *, reason=None):
-        if reason==None:
-            reason="no reason provided"
+        if reason == None:
+            reason = "no reason provided"
             await ctx.guild.ban(member)
             await ctx.send(f'User {member.mention} has been banned for ``{reason}``')
 
     @client.command()
     async def roast(ctx, member: discord.Member):
-        roasts = [
-            f"{member.mention}'s GPA may be high but the number of bitches on their dick is low",
-            f"I would roast {member.mention}, but my mom said I shouldnt burn trash",
-            f"I wish I could meet {member.mention} again and walk away this time",
-            f"whoever told {member.mention} to be themselves was lying",
-            f"sorry i can't think of an insult dumb enough for {member.mention} to understand",
-            f"i would call {member.mention} an idiot but that would be an insult to stupid people",
-            f"No breath mint can obscure the sheer stench of the bullshit that just came out of {member.mention}'s mouth just now."
-        ]
-        index = random.randrange(0, len(roasts))
-        await ctx.send(roasts[index])
+        # is_pussy = member.id in server_data[ctx.guild.id]['pussies']
+        # for id in server_data[ctx.guild.id]:
+        #     if id == member.id
+        if f"{member.id}" in server_data[ctx.guild.id]['pussies']:
+            await ctx.send(f"{member.mention}'s pretty cool!")
+        else:
+            roasts = [
+                f"{member.mention}'s GPA may be high but the number of bitches on their dick is low",
+                f"I would roast {member.mention}, but my mom said I shouldnt burn trash",
+                f"I wish I could meet {member.mention} again and walk away this time",
+                f"whoever told {member.mention} to be themselves was lying",
+                f"sorry i can't think of an insult dumb enough for {member.mention} to understand",
+                f"i would call {member.mention} an idiot but that would be an insult to stupid people",
+                f"No breath mint can obscure the sheer stench of the bullshit that just came out of {member.mention}'s mouth just now."
+            ]
+            index = random.randrange(0, len(roasts))
+            await ctx.send(roasts[index])
+            print(member.mention)
 
     @client.command()
     async def joke(ctx):
         jokes = [
-        'Why did the football coach go to the bank? To get his quarter back.',
-        'Why cant a leopard hide? Hes always spotted.',
-        'Air used to be free at the gas station, now it costs 2.50. You want to know why? Inflation.',
-        'I tried to get a smart car the other day but they sold out too fast. Why? I guess Im just a bit slow.',
-        'I told my wife that a husband is like a fine wine: we just get better with age. The next day she locked me in the cellar.',
-        "Why does a husband lead a dog's life? He comes in with muddy feet, gets comfortable by the fire, and waits to be fed.",
-        "Did you hear about the claustrophobic astronaut? He just wanted a bit more space.",
-        "What does the stork do once he's delivered the baby? He lies on the couch and drinks a beer!",
-        "How many telemarketers does it take to change a light bulb? Only one, but he has to do it during dinner.",
-        "Why did the orange lose the race? It ran out of juice.",
-        "How you fix a broken pumpkin? With a pumpkin patch.",
-        "Why are fish so smart? They live in schools!",
-        "What's the best thing about Switzerland? I don't know, but the flag is a big plus.",
-        "Why did the man fall down the well? Because he couldn’t see that well!",
-        "Why do peppers make such good archers? Because they habanero.",
-        "What did the sink tell the toilet? You look flushed!"
+            'Why did the football coach go to the bank? To get his quarter back.',
+            'Why cant a leopard hide? Hes always spotted.',
+            'Air used to be free at the gas station, now it costs 2.50. You want to know why? Inflation.',
+            'I tried to get a smart car the other day but they sold out too fast. Why? I guess Im just a bit slow.',
+            'I told my wife that a husband is like a fine wine: we just get better with age. The next day she locked me in the cellar.',
+            "Why does a husband lead a dog's life? He comes in with muddy feet, gets comfortable by the fire, and waits to be fed.",
+            "Did you hear about the claustrophobic astronaut? He just wanted a bit more space.",
+            "What does the stork do once he's delivered the baby? He lies on the couch and drinks a beer!",
+            "How many telemarketers does it take to change a light bulb? Only one, but he has to do it during dinner.",
+            "Why did the orange lose the race? It ran out of juice.",
+            "How you fix a broken pumpkin? With a pumpkin patch.",
+            "Why are fish so smart? They live in schools!",
+            "What's the best thing about Switzerland? I don't know, but the flag is a big plus.",
+            "Why did the man fall down the well? Because he couldn’t see that well!",
+            "Why do peppers make such good archers? Because they habanero.",
+            "What did the sink tell the toilet? You look flushed!"
         ]
         index = random.randrange(0, len(jokes))
         await ctx.send(jokes[index])
@@ -306,6 +357,15 @@ class MyClient(discord.Client):
                 await ctx.send(embed=embed)
 
     @client.command()
+    async def roleadd(ctx, userIn):
+        roleID = ""
+        role = ctx.guild.get_role(roleID)
+        userID = int(userIn.removeprefix("<@!").removesuffix(">").removeprefix("<@"))
+        await ctx.guild.get_member(userID).add_roles(role)
+        await ctx.send(f"Muted {userIn}")
+
+
+    @client.command()
     async def coin(ctx):
         flip = [
             "heads",
@@ -316,112 +376,8 @@ class MyClient(discord.Client):
 
     @client.command()
     async def commands(ctx):
-        await ctx.send(".ping\n.mute\n.unmute\n.config\n.duck\n.cat\n.dog\n.joke\n.meme\n.roast {member}\n.snipe\n.coin\n.kick\n.ban\n.hentai")
+        await ctx.send(
+            ".ping\n.mute\n.unmute\n.config\n.duck\n.cat\n.dog\n.joke\n.meme\n.roast {member}\n.snipe\n.coin\n.kick\n.ban\n.hentai")
 
-    @client.event
-    async def on_message(message):
-#filter
-        if "nigga" in message.content:
-            await message.delete()
-        if "nigger" in message.content:
-            await message.delete()
-        if "faggot" in message.content:
-            await message.delete()
-        await client.process_commands(message)
-
-#yt
-youtube_dl.utils.bug_reports_message = lambda: ''
-
-ytdl_format_options = {
-    'format': 'bestaudio/best',
-    'restrictfilenames': True,
-    'noplaylist': True,
-    'nocheckcertificate': True,
-    'ignoreerrors': False,
-    'logtostderr': False,
-    'quiet': True,
-    'no_warnings': True,
-    'default_search': 'auto',
-    'source_address': '0.0.0.0' # bind to ipv4 since ipv6 addresses cause issues sometimes
-}
-
-ffmpeg_options = {
-    'options': '-vn'
-}
-
-ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
-
-class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=0.5):
-        super().__init__(source, volume)
-        self.data = data
-        self.title = data.get('title')
-        self.url = ""
-
-    @classmethod
-    async def from_url(cls, url, *, loop=None, stream=False):
-        loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
-        if 'entries' in data:
-            # take first item from a playlist
-            data = data['entries'][0]
-        filename = data['title'] if stream else ytdl.prepare_filename(data)
-        return filename
-
-
-@client.command(name='join', help='Tells the bot to join the voice channel')
-async def join(ctx):
-    if not ctx.message.author.voice:
-        await ctx.send("{} is not connected to a voice channel".format(ctx.message.author.name))
-        return
-    else:
-        channel = ctx.message.author.voice.channel
-    await channel.connect()
-
-@client.command(name='leave', help='To make the bot leave the voice channel')
-async def leave(ctx):
-    voice_client = ctx.message.guild.voice_client
-    if voice_client.is_connected():
-        await voice_client.disconnect()
-    else:
-        await ctx.send("The bot is not connected to a voice channel.")
-
-@client.command(name='play_song', help='To play song')
-async def play(ctx,url):
-    try :
-        server = ctx.message.guild
-        voice_channel = server.voice_client
-
-        async with ctx.typing():
-            filename = await YTDLSource.from_url(url, loop=client.loop)
-            voice_channel.play(discord.FFmpegPCMAudio(executable="ffmpeg.exe", source=filename))
-        await ctx.send('**Now playing:** {}'.format(filename))
-    except:
-        await ctx.send("The bot is not connected to a voice channel.")
-
-
-@client.command(name='pause', help='This command pauses the song')
-async def pause(ctx):
-    voice_client = ctx.message.guild.voice_client
-    if voice_client.is_playing():
-        await voice_client.pause()
-    else:
-        await ctx.send("The bot is not playing anything at the moment.")
-    
-@client.command(name='resume', help='Resumes the song')
-async def resume(ctx):
-    voice_client = ctx.message.guild.voice_client
-    if voice_client.is_paused():
-        await voice_client.resume()
-    else:
-        await ctx.send("The bot was not playing anything before this. Use play_song command")
-
-@client.command(name='stop', help='Stops the song')
-async def stop(ctx):
-    voice_client = ctx.message.guild.voice_client
-    if voice_client.is_playing():
-        await voice_client.stop()
-    else:
-        await ctx.send("The bot is not playing anything at the moment.")
-
-client.run(token)
+#print(str(token))     #debug only
+client.run(str(token))
