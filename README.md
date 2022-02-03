@@ -1,9 +1,7 @@
 # northstar-bot
 A discord bot
 
-
-<a href="https://discord.com/oauth2/authorize?client_id=929900532192141342&permissions=8&scope=bot">add me!</a>
-
+[site](northstar.icu)
 <br>commands as of v0.0.2:
 <br>.ping
 <br>.mute
@@ -20,4 +18,4 @@ A discord bot
 <br>.kick
 <br>.ban
 <br>.hentai
-<br>also filters out and deletes slurs, as well as welcoming new members!
+<br>also with a configurable filter system, and new member welcoming!
