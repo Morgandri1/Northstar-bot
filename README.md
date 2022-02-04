@@ -3,7 +3,8 @@ A discord bot
 
 northstar.icu
 
-<br>commands as of v0.0.2:
+<br>commands as of v1.7:
+<br>.help
 <br>.ping
 <br>.mute
 <br>.unmute
