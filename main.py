@@ -16,8 +16,6 @@ import os
 from bs4 import BeautifulSoup
 from discord.ext.commands.cooldowns import BucketType
 
-
-
 intents = discord.Intents.all()
 intents.members = True
 client = commands.Bot(command_prefix=".", intents=intents)
@@ -28,12 +26,10 @@ snipe_message_content = None
 snipe_message_author = None
 snipe_message_id = None
 
-
 #client information
 def save_data():
     with open(f"configs.json", 'w') as fl:
         json.dump(server_data, fl, indent=2)
-
 
 def load_data(guild):
     data = {"mute_role": -1, "pussies": [], "filter": [], "money": {}}  # use <@userid>
@@ -77,14 +73,14 @@ class MyClient(discord.Client):
 
     @client.event
     async def on_message(message):
-                if message.content in server_data[message.guild.id]['filter']:
-                    await message.delete()
-                await client.process_commands(message)
+        if message.content in server_data[message.guild.id]['filter']:
+            await message.delete()
+        await client.process_commands(message)
 
     @client.command()
     @commands.cooldown(rate=2, per=1800, type=BucketType.user)
     async def money(message, option):
-        """the whole currency wrapper"""
+        """.money join to start!"""
         user = str(message.author.id)
         if option is None:
             await message.send("invalid")
@@ -107,8 +103,6 @@ class MyClient(discord.Client):
                 server_data[message.guild.id]["money"][user] += 5
                 save_data()
                 await message.send("you worked! you got 5 N coins.")
-        else:
-            message.send("invalid command. useage is join, wallet, or work")
 
     #currency error handler
     @money.error
@@ -343,6 +337,7 @@ class MyClient(discord.Client):
             "Why do peppers make such good archers? Because they habanero.",
             "What did the sink tell the toilet? You look flushed!",
             "why was the ant confused? because all of his undles were aunts!"
+            "i asked my german friend what the square root of 81 was. he said no."
         ]
         index = random.randrange(0, len(jokes))
         await ctx.send(jokes[index])
@@ -410,6 +405,30 @@ class MyClient(discord.Client):
         ]
         index = random.randrange(0, len(links))
         embed = discord.Embed(title="Dog", description="a picture of a dog")
+        embed.set_image(url=links[index])
+        await ctx.send(embed=embed)
+    
+    @client.command()
+    async def otter(ctx):
+        """sends an otter picture"""
+        links = [
+            "https://images.immediate.co.uk/production/volatile/sites/23/2016/08/GettyImages-557059821-836aa91.jpg?quality=90&resize=620%2C413",
+            "https://static01.nyt.com/images/2021/07/08/science/08TB-OTTERS1/08TB-OTTERS1-mobileMasterAt3x.jpg",
+            "https://gifts.worldwildlife.org/gift-center/Images/large-species-photo/large-Sea-Otter-photo.jpg",
+            "https://ichef.bbci.co.uk/news/976/cpsprodpb/3B4B/production/_109897151_otternew.jpg",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTn1bX32I9XM7P3cp4Qt_NvcfhnzhXyzcoOPA&usqp=CAU",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7LEmIrQhurLH6iNi8AGPIVSamJuvEc-OUfA&usqp=CAU",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRwdlMkT4O914pqlU-DVdI5PR6kPM0m8f1v_A&usqp=CAU",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRHlk5B2-nI25ybGchetck86CwJB2KT6pLjew&usqp=CAU",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxGQFqS52ZucYEWwUsLioNkOo5p1ZRO7vydQ&usqp=CAU",
+            "https://www.otterspecialistgroup.org/osg-newsite/wp-content/uploads/2017/04/ThinkstockPhotos-827261360.jpg",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTSNULFqAJo3y1WxcM2BIBOBPyjQ2PjQfGdEQ&usqp=CAU",
+            "https://globalnews.ca/wp-content/uploads/2018/12/Abby-otter-thicc.jpg?quality=85&strip=all&w=720&h=379&crop=1",
+            "https://www.calparks.org/sites/default/files/2019-09/iStock-1059316898_0.jpg",
+            "https://i.guim.co.uk/img/media/76c3d4490e882c62c7d2eae593426da1da8d0d0f/0_418_4800_2879/master/4800.jpg?width=1200&quality=85&auto=format&fit=max&s=499a5a77abf39f360778cc08700178aa"
+        ]
+        index = random.randrange(0, len(links))
+        embed = discord.Embed(title="Otter", description="a picture of an Otter")
         embed.set_image(url=links[index])
         await ctx.send(embed=embed)
 
