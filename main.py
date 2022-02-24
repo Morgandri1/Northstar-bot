@@ -1,3 +1,5 @@
+from multiprocessing.sharedctypes import Value
+from unittest import result
 import discord
 from discord import message
 from discord.ext import commands
@@ -8,14 +10,13 @@ import requests, json, os
 import asyncio
 import random
 import aiohttp
-import itertools
-import traceback
 from async_timeout import timeout
 from functools import partial
 import os
-import sys
-import youtube_dl
-import time
+from bs4 import BeautifulSoup
+from discord.ext.commands.cooldowns import BucketType
+
+
 
 intents = discord.Intents.all()
 intents.members = True
@@ -28,13 +29,14 @@ snipe_message_author = None
 snipe_message_id = None
 
 
+#client information
 def save_data():
     with open(f"configs.json", 'w') as fl:
         json.dump(server_data, fl, indent=2)
 
 
 def load_data(guild):
-    data = {"mute_role": -1, "pussies": [], "filter": []}  # use <@userid>
+    data = {"mute_role": -1, "pussies": [], "filter": [], "money": {}}  # use <@userid>
     if os.path.exists(f"configs.json"):
         with open(f'configs.json', 'r') as fl:
             loaded = json.load(fl)
@@ -44,11 +46,9 @@ def load_data(guild):
         with open(f'configs.json', 'w') as fl:
             json.dump(data, fl)
 
-    # if data == {}:
-    #     data = {"mute_role": -1, "pussies": []}
-
     return data
 
+#server information
 class MyClient(discord.Client):
     @client.event
     async def on_ready():
@@ -62,11 +62,11 @@ class MyClient(discord.Client):
                 \_| \_/\___/|_|   \__|_| |_|___/\__\__,_|_|   
                 
                         Logged in and ready
-                        made with ❤️  by Morgandri1
+                     made with ❤️  by Morgandri1
                     """)
         for guild in client.guilds:
             server_data[guild.id] = load_data(guild)
-        await client.change_presence(activity=discord.Streaming(name="v1.5", url='https://twitch.tv/Morgandri1'))
+        await client.change_presence(activity=discord.Streaming(name="v2.0", url='https://twitch.tv/Morgandri1'))
 
     @client.event
     async def on_member_join(self, member):
@@ -77,19 +77,80 @@ class MyClient(discord.Client):
 
     @client.event
     async def on_message(message):
-        # filter
                 if message.content in server_data[message.guild.id]['filter']:
                     await message.delete()
                 await client.process_commands(message)
 
     @client.command()
+    @commands.cooldown(rate=2, per=1800, type=BucketType.user)
+    async def money(message, option):
+        """the whole currency wrapper"""
+        user = str(message.author.id)
+        if option is None:
+            await message.send("invalid")
+            return
+        if option == 'join':
+            data = server_data[message.guild.id]["money"]
+            if user in data:
+                await message.send("you are already registered!")                
+            else:
+                server_data[message.guild.id]["money"][user] = 0
+                await message.send("added user to the economy! 🪙")
+                save_data()
+        if option == 'wallet':
+            if user in server_data[message.guild.id]["money"]:
+                global balance
+                balance = server_data[message.guild.id]["money"][user]
+                await message.send(balance)
+        if option == 'work':
+            if user in server_data[message.guild.id]["money"]:
+                server_data[message.guild.id]["money"][user] += 5
+                save_data()
+                await message.send("you worked! you got 5 N coins.")
+        else:
+            message.send("invalid command. useage is join, wallet, or work")
+
+    #currency error handler
+    @money.error
+    async def do_repeat_handler(ctx, error):
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send("you're on cooldown! you can only use money commands once per every 30 minutes!")
+
+    @client.command()
+    async def pay(message, userIn: str, value: int):
+        """pays someone with N coins!"""
+        user = str(message.author.id)
+        if user in server_data[message.guild.id]["money"]:
+            if balance >= value:
+                if userIn in server_data[message.guild.id]["money"]:
+                    server_data[message.guild.id]["money"][user] -= value
+                    save_data()
+                    await message.send(f"you payed {userIn} {value} N coins!")
+                else:
+                    await message.send(f"{userIn} is not registered!")
+            
+    @client.command()
+    async def stackstat(ctx):
+        """gets the status of stackoverflow"""
+        url = 'https://www.stackoverflow.com/'
+        reqs = requests.get(url)
+        soup = BeautifulSoup(reqs.text, 'html.parser')
+        for title in soup.find_all('title'):
+            if title.get_text() == "Stack Overflow - Where Developers Learn, Share, & Build Careers":
+                await ctx.send('stackoverflow is up!')
+            else:
+                await ctx.send('stackoverflow is down!')
+
+    @client.command()
     async def ping(ctx):
+        """shows the response time"""
         # embed = discord.Embed(title="Ping", description=f"{(int) (client.latency*1000)}ms")
         # await ctx.send(embed=embed)
         await ctx.send(f"Pong! ({(int)(client.latency * 1000)}ms)")
 
     @client.command()
     async def links(ctx):
+        """displays a list of Morgandril's links"""
         await ctx.send("github: https://github.com/Morgandri1 \ntwitch: https://twitch.tv/Morgandri1")
 
     global endpoint
@@ -118,18 +179,19 @@ class MyClient(discord.Client):
     @client.command()
     @has_permissions(administrator=True)
     async def mute(ctx, userIn: str):
+        """allows mods to mute a user"""
         userID = int(userIn.removeprefix("<@!").removesuffix(">").removeprefix("<@"))
-
         roleID = int(server_data[ctx.guild.id]['mute_role'])
         if roleID == -1:
             await ctx.send("You have not set a mute role!")
         role = ctx.guild.get_role(roleID)
         await ctx.guild.get_member(userID).add_roles(role)
-        await ctx.send(f"Muted {userIn}")
+        await ctx.send(f"Muted {userIn}") 
 
     @client.command()
     @has_permissions(administrator=True)
     async def unmute(ctx, userIn: str):
+        """allows mods to unmute a user"""
         userID = int(userIn.removeprefix("<@!").removesuffix(">").removeprefix("<@"))
 
         roleID = int(server_data[ctx.guild.id]['mute_role'])
@@ -138,13 +200,6 @@ class MyClient(discord.Client):
         role = ctx.guild.get_role(roleID)
         await ctx.guild.get_member(userID).remove_roles(role)
         await ctx.send(f"Unmuted {userIn}")
-
-    @client.command
-    @has_permissions(administrator=True)
-    async def stop(ctx):
-        ctx.send("stopping processes...")
-        time.wait(5)
-        exit()
 
     @client.event
     async def on_message_delete(message):
@@ -165,6 +220,7 @@ class MyClient(discord.Client):
 
     @client.command()
     async def snipe(message):
+        """gets a record of the last deleted message"""
         if snipe_message_content == None:
             await message.channel.send("Theres nothing to snipe.")
         else:
@@ -178,14 +234,15 @@ class MyClient(discord.Client):
     @client.command()
     @has_permissions(administrator=True)
     async def config(ctx, option, value):
+        """options: filter, muterole, people to not roast"""
         if option is None or value is None or option not in server_data[ctx.guild.id]:
-            await ctx.send("invalid")
+            await ctx.send("invalid operation")
             return
 
         if option == 'mute_role':
             value = value.removeprefix("<@&").removeprefix("<@").removesuffix(">")
             if not value.isdigit():
-                await ctx.send('integer pls')
+                await ctx.send('integer not passed')
                 return
             server_data[ctx.guild.id]['mute_role'] = int(value)
             save_data()
@@ -195,7 +252,7 @@ class MyClient(discord.Client):
         if option == "pussies":
             value = value.removeprefix("<@&").removesuffix(">")
             if not value.isdigit():
-                await ctx.send('integer pls')
+                await ctx.send('integer not passed')
                 return
             server_data[ctx.guild.id]['pussies'].append(value)
             save_data()
@@ -216,6 +273,7 @@ class MyClient(discord.Client):
 
     @client.command()
     async def hentai(ctx):
+        """y'all need jesus"""
         if ctx.channel.is_nsfw():
             url = requests.get(url="https://nekos.life/api/v2/img/pussy").json()['url']
             embed = discord.Embed(title="Here", description="Take some hentai you filthy animal")
@@ -227,6 +285,7 @@ class MyClient(discord.Client):
     @client.command()
     @commands.has_permissions(administrator=True)
     async def kick(ctx, member: discord.Member, *, reason=None):
+        """kicks a member"""
         if reason == None:
             reason = "no reason provided"
             await ctx.guild.kick(member)
@@ -235,6 +294,7 @@ class MyClient(discord.Client):
     @client.command()
     @commands.has_permissions(administrator=True)
     async def ban(ctx, member: discord.Member, *, reason=None):
+        """bans a member"""
         if reason == None:
             reason = "no reason provided"
             await ctx.guild.ban(member)
@@ -242,6 +302,7 @@ class MyClient(discord.Client):
 
     @client.command()
     async def roast(ctx, member: discord.Member):
+        """roast's the mentioned member"""
         # is_pussy = member.id in server_data[ctx.guild.id]['pussies']
         # for id in server_data[ctx.guild.id]:
         #     if id == member.id
@@ -263,6 +324,7 @@ class MyClient(discord.Client):
 
     @client.command()
     async def joke(ctx):
+        """sends a random dad joke"""
         jokes = [
             'Why did the football coach go to the bank? To get his quarter back.',
             'Why cant a leopard hide? Hes always spotted.',
@@ -279,13 +341,15 @@ class MyClient(discord.Client):
             "What's the best thing about Switzerland? I don't know, but the flag is a big plus.",
             "Why did the man fall down the well? Because he couldn’t see that well!",
             "Why do peppers make such good archers? Because they habanero.",
-            "What did the sink tell the toilet? You look flushed!"
+            "What did the sink tell the toilet? You look flushed!",
+            "why was the ant confused? because all of his undles were aunts!"
         ]
         index = random.randrange(0, len(jokes))
         await ctx.send(jokes[index])
 
     @client.command()
     async def duck(ctx):
+        """sends a picture of a duck"""
         links = [
             "https://c.tenor.com/AQecc2g8uuAAAAAC/duck-dance.gif",
             "https://c.tenor.com/xxeMW4g1NTAAAAAC/duck-dancing-duck.gif",
@@ -304,6 +368,7 @@ class MyClient(discord.Client):
 
     @client.command()
     async def cat(ctx):
+        """sends a cat picture"""
         links = [
             "https://hips.hearstapps.com/hmg-prod.s3.amazonaws.com/images/cute-cat-photos-1593441022.jpg?crop=0.669xw:1.00xh;0.166xw,0&resize=640:*",
             "https://images.unsplash.com/photo-1529778873920-4da4926a72c2?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8Y3V0ZSUyMGNhdHxlbnwwfHwwfHw%3D&w=1000&q=80",
@@ -326,6 +391,7 @@ class MyClient(discord.Client):
 
     @client.command()
     async def dog(ctx):
+        """sends a dog picture"""
         links = [
             "https://hips.hearstapps.com/hmg-prod.s3.amazonaws.com/images/dog-puppy-on-garden-royalty-free-image-1586966191.jpg?crop=1.00xw:0.669xh;0,0.190xh&resize=1200:*",
             "http://cdn.akc.org/content/article-body-image/golden_puppy_dog_pictures.jpg",
@@ -349,6 +415,7 @@ class MyClient(discord.Client):
 
     @client.command(pass_context=True)
     async def meme(ctx):
+        """sends a meme"""
         embed = discord.Embed(title="here's a meme", description="from r/memes")
         async with aiohttp.ClientSession() as cs:
             async with cs.get('https://www.reddit.com/r/memes/new.json?sort=hot') as r:
@@ -357,16 +424,23 @@ class MyClient(discord.Client):
                 await ctx.send(embed=embed)
 
     @client.command()
-    async def roleadd(ctx, userIn):
-        roleID = ""
-        role = ctx.guild.get_role(roleID)
-        userID = int(userIn.removeprefix("<@!").removesuffix(">").removeprefix("<@"))
-        await ctx.guild.get_member(userID).add_roles(role)
-        await ctx.send(f"Muted {userIn}")
+    async def add(ctx, left: int, right: int):
+        """adds two numbers"""
+        await ctx.send(left + right)
+        
+    @client.command()
+    async def multiply(ctx, left: int, right: int):
+        """multiplies two numbers"""
+        await ctx.send(left * right)
 
+    @client.command()
+    async def divide(ctx, left: int, right: int):
+        """divides two numbers"""
+        await ctx.send(left / right)
 
     @client.command()
     async def coin(ctx):
+        """flips a coin"""
         flip = [
             "heads",
             "tails"
@@ -375,9 +449,16 @@ class MyClient(discord.Client):
         await ctx.send(flip[index])
 
     @client.command()
-    async def commands(ctx):
-        await ctx.send(
-            ".ping\n.mute\n.unmute\n.config\n.duck\n.cat\n.dog\n.joke\n.meme\n.roast {member}\n.snipe\n.coin\n.kick\n.ban\n.hentai")
+    async def roll(ctx, dice: str):
+        """ex: .roll 1d6"""
+        try:
+            rolls, limit = map(int, dice.split('d'))
+        except Exception:
+            await ctx.send('Format has to be in NdN!')
+            return
+
+        result = ', '.join(str(random.randint(1, limit)) for r in range(rolls))
+        await ctx.send(result)
 
 #print(str(token))     #debug only
 client.run(str(token))
