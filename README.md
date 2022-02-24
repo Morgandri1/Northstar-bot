@@ -1,7 +1,7 @@
 # northstar-bot
 A discord bot
 
-northstar.icu
+http://northstar.icu
 
 <br>commands as of v2.0:
 <br>add
