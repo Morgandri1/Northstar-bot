@@ -3,7 +3,7 @@ A discord bot
 
 http://northstar.icu
 
-<br>commands as of v2.0:
+<br>commands as of v2.1:
 <br>add
 <br>ban
 <br>cat
