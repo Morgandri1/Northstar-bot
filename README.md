@@ -3,12 +3,12 @@ A discord bot
 
 http://northstar.icu
 
-<br>commands as of v2.2:
+<br>commands as of v2.4:
 <br>add
 <br>ban
 <br>cat
 <br>coin
-<br>config - options: mute_role, filter, pussies (people not to roast), and clear.
+<br>config - options: mute_role, filter, pussies (people not to roast), announcement and clear.
 <br>divide
 <br>dog
 <br>otter
