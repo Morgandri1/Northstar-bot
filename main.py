@@ -32,17 +32,18 @@ def save_data():
         json.dump(server_data, fl, indent=2)
 
 def load_data(guild):
-    data = {"mute_role": -1, "pussies": [], "filter": [], "money": {}}  # use <@userid>
+    global DefData
+    DefData = {"mute_role": -1, "pussies": [], "filter": [], "money": {}}  # use <@userid>
     if os.path.exists(f"configs.json"):
         with open(f'configs.json', 'r') as fl:
             loaded = json.load(fl)
             if f"{guild.id}" in loaded:
-                data = loaded[f"{guild.id}"]
+                DefData = loaded[f"{guild.id}"]
     else:
         with open(f'configs.json', 'w') as fl:
-            json.dump(data, fl)
+            json.dump(DefData, fl)
 
-    return data
+    return DefData
 
 #server information
 class MyClient(discord.Client):
@@ -228,9 +229,24 @@ class MyClient(discord.Client):
     @client.command()
     @has_permissions(administrator=True)
     async def config(ctx, option, value):
-        """options: filter, muterole, people to not roast"""
-        if option is None or value is None or option not in server_data[ctx.guild.id]:
+        """options: filter, muterole, people to not roast, clear"""
+        if option is None or value is None:
             await ctx.send("invalid operation")
+            return
+
+        if option == "clear":
+            if value is None or value == "all":
+                server_data[ctx.guild.id] == DefData
+            if value == "mute_role":
+                server_data[ctx.guild.id]["mute_role"] == -1
+            if value == "pussies":
+                server_data[ctx.guild.id]["pussies"] == []
+            if value == "filter":
+                server_data[ctx.guild.id]["filter"] == []
+            if value == "money": 
+                server_data[ctx.guild.id]["money"] == {}
+            save_data()
+            await ctx.send(f"cleared data from {value}")
             return
 
         if option == 'mute_role':
@@ -261,7 +277,7 @@ class MyClient(discord.Client):
             filters.append(value)
             save_data()
             await ctx.send("appended the filter list")
-            return
+            return           
 
         await ctx.send("Failed to do something. idk what. fix")
 
