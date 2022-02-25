@@ -62,7 +62,7 @@ class MyClient(discord.Client):
                     """)
         for guild in client.guilds:
             server_data[guild.id] = load_data(guild)
-        await client.change_presence(activity=discord.Streaming(name="v2.0", url='https://twitch.tv/Morgandri1'))
+        await client.change_presence(activity=discord.Streaming(name="v2.1", url='https://twitch.tv/Morgandri1'))
 
     @client.event
     async def on_member_join(self, member):
