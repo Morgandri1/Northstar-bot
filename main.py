@@ -1,11 +1,8 @@
-from multiprocessing.sharedctypes import Value
-from unittest import result
 import discord
 from discord import message
 from discord.ext import commands
 from discord.ext.commands import has_permissions
 from discord.webhook import AsyncWebhookAdapter
-from numpy import true_divide
 import requests, json, os
 import asyncio
 import random
@@ -76,6 +73,9 @@ class MyClient(discord.Client):
     async def on_message(message):
         if message.content in server_data[message.guild.id]['filter']:
             await message.delete()
+        if message.channel.id == 729581806055194735:
+            await message.add_reaction("⬆️")
+            await message.add_reaction("⬇️")
         await client.process_commands(message)
 
     @client.command()
@@ -229,7 +229,7 @@ class MyClient(discord.Client):
     @client.command()
     @has_permissions(administrator=True)
     async def config(ctx, option, value):
-        """options: filter, muterole, people to not roast, clear"""
+        """options: filter, mute_role, people to not roast, clear"""
         if option is None or value is None:
             await ctx.send("invalid operation")
             return
