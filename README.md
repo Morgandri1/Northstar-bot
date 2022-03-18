@@ -3,11 +3,14 @@ A discord bot
 
 http://northstar.icu
 
+its easier to just use .help
+
+heres the commands anyway:
 <br>add
 <br>ban
 <br>cat
 <br>coin
-<br>config    options: filter, mute_role, people to not roast, announcement, welcome channel, join_message and clear
+<br>config
 <br>divide
 <br>dog
 <br>duck
@@ -17,7 +20,7 @@ http://northstar.icu
 <br>kick
 <br>links
 <br>meme
-<br>money   .money join to start! also with wallet and work options.
+<br>money
 <br>multiply
 <br>mute
 <br>number
