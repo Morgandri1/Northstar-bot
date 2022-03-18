@@ -2,7 +2,6 @@ import discord
 from discord import message
 from discord.ext import commands
 from discord.ext.commands import has_permissions
-from discord.webhook import AsyncWebhookAdapter
 import requests, json, os
 import asyncio
 import random
@@ -14,23 +13,29 @@ from bs4 import BeautifulSoup
 from discord.ext.commands.cooldowns import BucketType
 
 intents = discord.Intents.all()
+#gotta update server version
+#intents.message_content = True
 intents.members = True
 client = commands.Bot(command_prefix=".", intents=intents)
 Tfile = open('token.txt', 'r')
 token = Tfile.readline()
 server_data = {}
+reaction_data = {}
 snipe_message_content = None
 snipe_message_author = None
 snipe_message_id = None
 
-#client information
-def save_data():
+def save():
     with open(f"configs.json", 'w') as fl:
         json.dump(server_data, fl, indent=2)
+    with open(f"reactions.json", "w") as rl:
+        json.dump(reaction_data, rl, indent=2)
 
-def load_data(guild):
+
+def load(guild):
     global DefData
-    DefData = {"mute_role": -1, "pussies": [], "filter": [], "money": {}}  # use <@userid>
+    DefData = {"mute_role": -1, "announcement": -1, "Welcome": -1, "pussies": [], "filter": [], "join_role": -1, "join_message": -1, "money": {}}  # use <@userid>
+    DefReact = {"message": {}}
     if os.path.exists(f"configs.json"):
         with open(f'configs.json', 'r') as fl:
             loaded = json.load(fl)
@@ -42,38 +47,51 @@ def load_data(guild):
 
     return DefData
 
+
+#remember to change me
+version = "3.3"
+
 #server information
 class MyClient(discord.Client):
     @client.event
     async def on_ready():
         print(f'We have logged in as {client.user}')
-        print("""
+        print(f"""
                  _   _            _   _         _             
                 | \ | |          | | | |       | |            
                 |  \| | ___  _ __| |_| |__  ___| |_ __ _ _ __ 
                 | . ` |/ _ \| '__| __| '_ \/ __| __/ _` | '__|
                 | |\  | (_) | |  | |_| | | \__ \ || (_| | |   
-                \_| \_/\___/|_|   \__|_| |_|___/\__\__,_|_|   
+                \_| \_/\___/|_|   \__|_| |_|___/\__\__,_|_|     {version} 
                 
                         Logged in and ready
                      made with ❤️  by Morgandri1
                     """)
         for guild in client.guilds:
-            server_data[guild.id] = load_data(guild)
-        await client.change_presence(activity=discord.Streaming(name="v2.1", url='https://twitch.tv/Morgandri1'))
-
+            server_data[guild.id] = load(guild)
+        await client.change_presence(activity=discord.Streaming(name=f"{version}", url='https://twitch.tv/Morgandri1'))
+        # if guild.system_channel is not None:
+        #     to_send = 'Northstar is back online!'
+        #     await guild.system_channel.send(to_send)
+    
     @client.event
-    async def on_member_join(self, member):
+    async def on_member_join(member):
         guild = member.guild
-        if guild.system_channel is not None:
+        global channel
+        channel = client.get_channel(server_data[guild.id]['Welcome'])
+        if server_data[guild.id]['join_message'] == -1:
             to_send = f'Welcome {member.mention} to {guild.name}!'
-            await guild.system_channel.send(to_send)
+            await channel.send(to_send)
+        else:
+            to_send = server_data[guild.id]['join_message']
+            await channel.send(to_send)
+        return
 
     @client.event
     async def on_message(message):
         if message.content in server_data[message.guild.id]['filter']:
             await message.delete()
-        if message.channel.id == 729581806055194735:
+        if message.channel.id == server_data[message.guild.id]['announcement']:
             await message.add_reaction("⬆️")
             await message.add_reaction("⬇️")
         await client.process_commands(message)
@@ -93,37 +111,54 @@ class MyClient(discord.Client):
             else:
                 server_data[message.guild.id]["money"][user] = 0
                 await message.send("added user to the economy! 🪙")
-                save_data()
+                save()
         if option == 'wallet':
             if user in server_data[message.guild.id]["money"]:
                 global balance
                 balance = server_data[message.guild.id]["money"][user]
-                await message.send(balance)
+                await message.send(f"you have {balance} coins 🪙")
+                return
         if option == 'work':
             if user in server_data[message.guild.id]["money"]:
                 server_data[message.guild.id]["money"][user] += 5
-                save_data()
-                await message.send("you worked! you got 5 N coins.")
+                save()
+                await message.send("you worked! you got 5 N coins 🪙")
+                return
 
-    #currency error handler
+    # currency error handler
     @money.error
     async def do_repeat_handler(ctx, error):
         if isinstance(error, commands.CommandOnCooldown):
-            await ctx.send("you're on cooldown! you can only use money commands once per every 30 minutes!")
+            await ctx.send("you're on cooldown! you can only use money commands twice per every 30 minutes!")
 
     @client.command()
     async def pay(message, userIn: str, value: int):
         """pays someone with N coins!"""
         user = str(message.author.id)
+        if userIn is None or value is None:
+            await message.send("you must provide both a user and a value!")
+            return
+        if userIn == str(message.author.id):
+            await message.send("you cannot pay yourself!")
+            return
         if user in server_data[message.guild.id]["money"]:
             if balance >= value:
                 if userIn in server_data[message.guild.id]["money"]:
                     server_data[message.guild.id]["money"][user] -= value
-                    save_data()
+                    server_data[message.guild.id]["money"][userIn] += value
+                    save()
                     await message.send(f"you payed {userIn} {value} N coins!")
+                    return
                 else:
                     await message.send(f"{userIn} is not registered!")
-            
+                    return
+            else:
+                await message.send("you can't afford that transaction!")
+                return
+        else:
+            await message.send("you have not registered!")
+            return
+
     @client.command()
     async def stackstat(ctx):
         """gets the status of stackoverflow"""
@@ -229,7 +264,7 @@ class MyClient(discord.Client):
     @client.command()
     @has_permissions(administrator=True)
     async def config(ctx, option, value):
-        """options: filter, mute_role, people to not roast, clear"""
+        """options: filter, mute_role, people to not roast, announcement, welcome channel, join_message and clear"""
         if option is None or value is None:
             await ctx.send("invalid operation")
             return
@@ -237,17 +272,52 @@ class MyClient(discord.Client):
         if option == "clear":
             if value is None or value == "all":
                 server_data[ctx.guild.id] == DefData
+                save()
+                await ctx.send(f"cleared data from {value}")
+                return
             if value == "mute_role":
-                server_data[ctx.guild.id]["mute_role"] == -1
+                server_data[ctx.guild.id]["mute_role"] = -1
+                save()
+                await ctx.send(f"cleared data from {value}")
+                return
             if value == "pussies":
-                server_data[ctx.guild.id]["pussies"] == []
+                server_data[ctx.guild.id]["pussies"] = []
+                save()
+                await ctx.send(f"cleared data from {value}")
+                return
             if value == "filter":
-                server_data[ctx.guild.id]["filter"] == []
+                server_data[ctx.guild.id]["filter"] = []
+                save()
+                await ctx.send(f"cleared data from {value}")
+                return
             if value == "money": 
-                server_data[ctx.guild.id]["money"] == {}
-            save_data()
-            await ctx.send(f"cleared data from {value}")
-            return
+                server_data[ctx.guild.id]["money"] = {}
+                save()
+                await ctx.send(f"cleared data from {value}")
+                return
+            if value == "announcement":
+                server_data[ctx.guild.id]["announcement"] = -1
+                save()
+                await ctx.send(f"cleared data from {value}")
+                return
+            if value == "welcome":
+                server_data[ctx.guild.id]["Welcome"] = -1
+                save()
+                await ctx.send(f"cleared data from {value}")
+                return
+            if value == "join_message":
+                server_data[ctx.guild.id]["join_message"] = -1
+                save()
+                await ctx.send(f"cleared data from {value}")
+                return
+            if value == "join_role":
+                server_data[ctx.guild.id]["join_role"] = -1
+                save()
+                await ctx.send(f"cleared data from {value}")
+                return
+            else: 
+                await ctx.send(f"error! {value} is an incompatible argument.")
+                return
 
         if option == 'mute_role':
             value = value.removeprefix("<@&").removeprefix("<@").removesuffix(">")
@@ -255,7 +325,7 @@ class MyClient(discord.Client):
                 await ctx.send('integer not passed')
                 return
             server_data[ctx.guild.id]['mute_role'] = int(value)
-            save_data()
+            save()
             await ctx.send(f"Set the mute role to id {value}")
             return
 
@@ -265,7 +335,7 @@ class MyClient(discord.Client):
                 await ctx.send('integer not passed')
                 return
             server_data[ctx.guild.id]['pussies'].append(value)
-            save_data()
+            save()
             await ctx.send(f"Added <@{value}> to the list of pussies")
             return
         
@@ -275,11 +345,59 @@ class MyClient(discord.Client):
                 await ctx.send("already added to the list of filters")
                 return
             filters.append(value)
-            save_data()
+            save()
             await ctx.send("appended the filter list")
             return           
+        
+        if option == "announcement":
+            value = value.removeprefix("<#").removesuffix(">")
+            channel = value
+            data = server_data[ctx.guild.id]["announcement"]
+            if data != -1:
+                await ctx.send("you have already set an announcement channel. use .config clear announcment to reset it.")
+            else:
+                server_data[ctx.guild.id]['announcement'] = int(channel)
+                save()
+                await ctx.send("added an announcement channel.")
+                return
+        
+        if option == "welcome":
+            value = value.removeprefix("<#").removesuffix(">")
+            channel = value
+            data = server_data[ctx.guild.id]["Welcome"]
+            if data != -1:
+                await ctx.send("your already have a Welcome channel set! use .config clear welcome to reset it.")
+            else:
+                server_data[ctx.guild.id]['Welcome'] = int(channel)
+                save()
+                await ctx.send("set your welcome channel.")
+            return
+        
+        if option == "join_role":
+            value = value.removeprefix("<@&").removeprefix("<@").removesuffix(">")
+            roleID = int(value)
+            data = server_data[ctx.guild.id]['join_role']
+            if data != -1:
+                await ctx.send("you already have a join role set!")
+            else:
+                server_data[ctx.guild.id]['join_role'] = int(roleID)
+                save()
+                await ctx.send("set your join role.")
+            return
+        
+        if option == "join_message":
+            message = value
+            data = server_data[ctx.guild.id]['join_message']
+            if data != -1:
+                await ctx.send(f"you already have a message set! it is currently ``{data}``")
+            else:
+                serevr_data = server_data[ctx.guild.id]["join_message"] = str(message)
+                save()
+                await ctx.send("set welcome message.")
+            return
+                
 
-        await ctx.send("Failed to do something. idk what. fix")
+        await ctx.send("Failed to do something. idk what, probably the wrong config. use ``.help config`` for more information")
 
     @client.command()
     async def hentai(ctx):
@@ -313,9 +431,6 @@ class MyClient(discord.Client):
     @client.command()
     async def roast(ctx, member: discord.Member):
         """roast's the mentioned member"""
-        # is_pussy = member.id in server_data[ctx.guild.id]['pussies']
-        # for id in server_data[ctx.guild.id]:
-        #     if id == member.id
         if f"{member.id}" in server_data[ctx.guild.id]['pussies']:
             await ctx.send(f"{member.mention}'s pretty cool!")
         else:
@@ -493,7 +608,22 @@ class MyClient(discord.Client):
             return
 
         result = ', '.join(str(random.randint(1, limit)) for r in range(rolls))
-        await ctx.send(result)
+        await ctx.send(f"rolled a {result}")
+
+    @client.command()
+    async def number(ctx, value1, value2):
+        """picks a number. ex: .random 1 10"""
+        if value1 is None or value2 is None:
+            await ctx.send("must have 2 values")
+        if value1 == value2:
+            await ctx.send("must have 2 different numbers")
+        rand = random.randint(value1, value2)
+        await ctx.send(f"picked {rand} from {value1}-{value2}")
+
+    @client.command()
+    @commands.has_permissions(administrator=True)
+    async def purge(ctx, ammount=1):
+        await ctx.channel.purge(limit=ammount+1)
 
 #print(str(token))     #debug only
 client.run(str(token))
