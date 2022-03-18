@@ -17,7 +17,7 @@ http://northstar.icu
 <br>kick
 <br>links
 <br>meme
-<br>money     .money join to start! also with wallet and work options.
+<br>money   .money join to start! also with wallet and work options.
 <br>multiply
 <br>mute
 <br>number
