@@ -3,6 +3,8 @@ A discord bot
 
 http://northstar.icu
 
+ARCHIVED! ALL SOURCE CODE FOUND HERE IS OUTDATED, BUT CURRENT CODE CAN BE FOUND ON PATREON! https://patreon.com/Morgandril
+
 its easier to just use .help
 
 heres the commands anyway:
@@ -30,6 +32,10 @@ heres the commands anyway:
 <br>purge
 <br>roast
 <br>roll
+<br>poll
+<br>opt
+<br>debug
+<br>purge
 <br>snipe
 <br>stackstat
 <br>unmute
