@@ -3,8 +3,6 @@ A discord bot
 
 http://northstar.icu
 
-ARCHIVED! ALL SOURCE CODE FOUND HERE IS OUTDATED, BUT CURRENT CODE CAN BE FOUND ON PATREON! https://patreon.com/Morgandril
-
 its easier to just use .help
 
 heres the commands anyway:
